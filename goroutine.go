@@ -23,6 +23,27 @@ type Goroutine struct {
 	Stack       string // the full stack trace, useful for debugging
 }
 
+func (g Goroutine) isBackground() bool {
+	// These prefixes cover Go's internal goroutines and our own.
+	skip := []string{
+		"runtime.",
+		"runtime/trace.",
+		"testing.",
+		"net/http.(*Server).Serve",
+		"net/http.(*persistConn)",
+		"github.com/yourname/gleak",
+	}
+	for _, prefix := range skip {
+		if strings.HasPrefix(g.TopFunction, prefix) {
+			return true
+		}
+		if strings.HasPrefix(g.CreatedBy, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func snapshot() []Goroutine {
 	// Start with a 64 KB buffer and double it until it fits everything.
 	buf := make([]byte, 64*1024)
@@ -127,4 +148,20 @@ func funcNameOnly(line string) string {
 		return line[:idx]
 	}
 	return line
+}
+
+func selfID() uint64 {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false) // false = only THIS goroutine
+	line := string(buf[:n])
+	// First line: "goroutine 42 [running]:"
+	if idx := strings.Index(line, "\n"); idx >= 0 {
+		line = line[:idx]
+	}
+	line = strings.TrimPrefix(line, "goroutine ")
+	if idx := strings.Index(line, " "); idx >= 0 {
+		line = line[:idx]
+	}
+	id, _ := strconv.ParseUint(line, 10, 64)
+	return id
 }
