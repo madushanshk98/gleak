@@ -6,13 +6,15 @@ import (
 	"strings"
 )
 
-
-//Sample go
+// Sample go
 // goroutine 18 [chan receive]:
 // main.worker(0xc000056780)
-//         /home/user/main.go:42 +0x58
+//
+//	/home/user/main.go:42 +0x58
+//
 // created by main.main in goroutine 1
-//         /home/user/main.go:10 +0x2c
+//
+//	/home/user/main.go:10 +0x2c
 type Goroutine struct {
 	ID          uint64 // the number Go assigns to every goroutine, e.g. 42
 	State       string // what it's doing right now, e.g. "chan receive", "IO wait"
@@ -117,4 +119,12 @@ func parseOneBlock(block string) (Goroutine, bool) {
 		CreatedBy:   createdBy,
 		Stack:       block,
 	}, true
+}
+
+func funcNameOnly(line string) string {
+	line = strings.TrimSpace(line)
+	if idx := strings.Index(line, "("); idx >= 0 {
+		return line[:idx]
+	}
+	return line
 }
