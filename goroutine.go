@@ -2,9 +2,17 @@ package gleak
 
 import (
 	"runtime"
+	"strconv"
 	"strings"
 )
 
+
+//Sample go
+// goroutine 18 [chan receive]:
+// main.worker(0xc000056780)
+//         /home/user/main.go:42 +0x58
+// created by main.main in goroutine 1
+//         /home/user/main.go:10 +0x2c
 type Goroutine struct {
 	ID          uint64 // the number Go assigns to every goroutine, e.g. 42
 	State       string // what it's doing right now, e.g. "chan receive", "IO wait"
@@ -52,4 +60,61 @@ func parseAllBlocks(dump string) []Goroutine {
 		}
 	}
 	return result
+}
+
+func parseOneBlock(block string) (Goroutine, bool) {
+	lines := strings.Split(strings.TrimSpace(block), "\n")
+	if len(lines) < 2 {
+		return Goroutine{}, false
+	}
+
+	// ── Parse the header line ────────────────────────────────────────────────
+	// Example: "goroutine 18 [chan receive]:"
+	header := lines[0]
+	if !strings.HasPrefix(header, "goroutine ") {
+		return Goroutine{}, false
+	}
+	header = strings.TrimPrefix(header, "goroutine ")
+	header = strings.TrimSuffix(header, ":")
+
+	// Split "18 [chan receive]" into id="18" and state="chan receive"
+	bracketAt := strings.Index(header, " [")
+	if bracketAt < 0 {
+		return Goroutine{}, false
+	}
+	id, err := strconv.ParseUint(header[:bracketAt], 10, 64)
+	if err != nil {
+		return Goroutine{}, false
+	}
+	state := strings.Trim(header[bracketAt:], " []:")
+
+	// ── Parse the top function (second line) ─────────────────────────────────
+	// Example: "main.worker(0xc000056780)"  →  "main.worker"
+	topFunc := ""
+	if len(lines) > 1 {
+		topFunc = funcNameOnly(lines[1])
+	}
+
+	// ── Find the "created by" line (scan from the bottom) ────────────────────
+	// Example: "created by main.main in goroutine 1"  →  "main.main"
+	createdBy := ""
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.HasPrefix(lines[i], "created by ") {
+			raw := strings.TrimPrefix(lines[i], "created by ")
+			// Go 1.21+ adds " in goroutine N" — strip it.
+			if idx := strings.Index(raw, " in goroutine "); idx >= 0 {
+				raw = raw[:idx]
+			}
+			createdBy = strings.TrimSpace(raw)
+			break
+		}
+	}
+
+	return Goroutine{
+		ID:          id,
+		State:       state,
+		TopFunction: topFunc,
+		CreatedBy:   createdBy,
+		Stack:       block,
+	}, true
 }
