@@ -1,6 +1,9 @@
 package gleak
 
-import "runtime"
+import (
+	"runtime"
+	"strings"
+)
 
 type Goroutine struct {
 	ID          uint64 // the number Go assigns to every goroutine, e.g. 42
@@ -22,4 +25,31 @@ func snapshot() []Goroutine {
 		buf = make([]byte, len(buf)*2) //double it until it fits everything.
 	}
 	return parseAllBlocks(string(buf))
+}
+
+func parseAllBlocks(dump string) []Goroutine {
+	var result []Goroutine
+	var current strings.Builder
+
+	for _, line := range strings.Split(dump, "\n") {
+		if strings.TrimSpace(line) == "" {
+			// Blank line = end of one goroutine block.
+			if current.Len() > 0 {
+				if g, ok := parseOneBlock(current.String()); ok {
+					result = append(result, g)
+				}
+				current.Reset()
+			}
+		} else {
+			current.WriteString(line)
+			current.WriteByte('\n')
+		}
+	}
+	// Handle the last block if the dump doesn't end with a blank line.
+	if current.Len() > 0 {
+		if g, ok := parseOneBlock(current.String()); ok {
+			result = append(result, g)
+		}
+	}
+	return result
 }
