@@ -67,10 +67,9 @@ func StopLeakDetector() {
 ## Add 2 lines to `main.go`
 ```go
 func main() {
-    monitoring.InitLeakDetector()      // ← ADD THIS (first line)
-    defer monitoring.StopLeakDetector() // ← ADD THIS (second line)
+    monitoring.InitLeakDetector() 
+    defer monitoring.StopLeakDetector()
 
-    // ... rest of your existing main() code unchanged ...
 }
 
 ```
