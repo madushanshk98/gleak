@@ -83,8 +83,6 @@ r.GET("/debug/gleak", func(c *gin.Context) {
 ```
 
 ---
-## Create one file 
-internal/monitoring/gleak.go
 
 ## Use in tests (Tracker)
 
