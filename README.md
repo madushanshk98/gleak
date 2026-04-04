@@ -26,7 +26,65 @@ program down.
 go get github.com/madushanshk98/gleak
 ```
 
+
 ---
+## Create one file `internal/monitoring/gleak.go`
+```go
+package monitoring
+
+import (
+    "log/slog"
+    "time"
+    "github.com/madushanshk98/gleak"
+)
+
+var LeakMonitor *gleak.Monitor
+
+func InitLeakDetector() {
+    LeakMonitor = gleak.NewMonitor(gleak.Options{
+        Threshold:      25,
+        SampleInterval: 30 * time.Second,
+        OnLeak: func(leaked []gleak.Goroutine) {
+            for _, g := range leaked {
+                slog.Error("goroutine leak",
+                    "id",          g.ID,
+                    "state",       g.State,
+                    "function",    g.TopFunction,
+                    "created_by",  g.CreatedBy,
+                )
+            }
+        },
+    })
+    LeakMonitor.Start()
+}
+
+func StopLeakDetector() {
+    if LeakMonitor != nil {
+        LeakMonitor.Stop()
+    }
+}
+```
+## Add 2 lines to `main.go`
+```go
+func main() {
+    monitoring.InitLeakDetector()      // ← ADD THIS (first line)
+    defer monitoring.StopLeakDetector() // ← ADD THIS (second line)
+
+    // ... rest of your existing main() code unchanged ...
+}
+
+```
+## Add route to your router
+```go
+r.GET("/debug/gleak", func(c *gin.Context) {
+    monitoring.LeakMonitor.Handler().ServeHTTP(c.Writer, c.Request)
+})
+
+```
+
+---
+## Create one file 
+internal/monitoring/gleak.go
 
 ## Use in tests (Tracker)
 
