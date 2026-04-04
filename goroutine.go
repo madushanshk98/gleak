@@ -31,7 +31,7 @@ func (g Goroutine) isBackground() bool {
 		"testing.",
 		"net/http.(*Server).Serve",
 		"net/http.(*persistConn)",
-		"github.com/yourname/gleak",
+		"github.com/madushanshk98/gleak",
 	}
 	for _, prefix := range skip {
 		if strings.HasPrefix(g.TopFunction, prefix) {

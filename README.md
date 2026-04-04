@@ -23,7 +23,7 @@ program down.
 ## Install
 
 ```bash
-go get github.com/yourname/gleak
+go get github.com/madushanshk98/gleak
 ```
 
 ---
